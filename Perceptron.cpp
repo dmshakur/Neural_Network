@@ -1,41 +1,57 @@
 #include "Perceptron.h"
-#include <cmath>
+#include <iostream>
 #include <cstdlib>
-#include <sstream>
+#include <iomanip>
+#include <cmath>
 #include <fstream>
+#include <sstream>
+#include <vector>
 #include <string>
 
 Perceptron::Perceptron(std::string file_path)
-    : {
-        for (auto node : input_layer)
-            node = (double)rand() / (double)RAND_MAX;
-        bias = (double)rand() / (double)RAND_MAX;
-        parse_file(file_path);
-        std::cout << "File parsed, weights and bias randomized" << std::endl;
-    }
-
-double Perceptron::dot_val(const double &weight)
 {
-    double output = bias;
-
-    for (size_t i = 0; i < 5; ++i)
-        output += (input_layer[i] * weight);
-
-    return output;
+    initialize_weights_bias();
+    parse_file(file_path);
+    std::cout << "File parsed, weights and bias' randomized" << std::endl;
 }
 
-double Perceptron::sigmoid(const double &node)
+template<size_t H, size_t V>
+double Perceptron::dot_val(const std::array<std::array<double, H>, V> layer)
 {
-    return (1 / (1 + exp(-node)))
+    double output;
+
+    for (size_t i = 0; i < V; ++i)
+        output += layer[i][0] * layer[i][1];
+
+    return sigmoid(output);
 }
 
-void Perceptron::engage_perceptron()
+double Perceptron::sigmoid(const double temp )//[])
 {
-    for (size_t i = 0; i < 7; ++i)
+    // double temp;
+    // for (size_t i = 0; i < 4; ++i)
+    //     temp += layer[i];
+    return (1 / (1 + exp(-temp)));
+}
+
+double Perceptron::random_number()
+{
+    return (double)rand() / (double)RAND_MAX;
+}
+
+void Perceptron::run()
+{
+    std::setprecision(5);
+    for (auto vec_of_doubles : iris_setosa)
     {
-        hidden_layer[i] = dot_val(hidden_weights[i]);
-    }
+        for (size_t i = 0; i < 6; ++i)
+            hidden_layer[i][0] = dot_val(input_layer);
 
+        for (size_t i = 0; i < 4; ++i)
+            output_layer[i][0] = dot_val(hidden_layer);
+
+        // std::cout << output_layer;
+    }
 }
 
 void Perceptron::parse_file(std::string path)
@@ -67,4 +83,18 @@ void Perceptron::parse_file(std::string path)
 void Perceptron::display()
 {
     std::cout << "iris_setosa.size(): " << iris_setosa.size() << ", iris_versicolor.size(): " << iris_versicolor.size() << ", iris_virginica.size(): " << iris_virginica.size();
+}
+
+void Perceptron::initialize_weights_bias ()
+{
+    for (size_t i = 0; i < 4; ++i)
+    {
+        input_layer[i][1] = random_number(); // Weight
+        output_layer[i][1] = random_number(); // Weight
+    }
+    for (auto &elem : hidden_layer)
+    {
+        elem[1] = random_number(); // Weight
+        elem[2] = random_number(); // Bias
+    }
 }
