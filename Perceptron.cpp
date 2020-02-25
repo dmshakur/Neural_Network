@@ -10,17 +10,18 @@
 
 Perceptron::Perceptron(std::string file_path)
 {
-    initialize_weights_bias();
     parse_file(file_path);
+    initialize(hidden_layer);
+    initialize(output_layer);
     std::cout << "File parsed, weights and bias randomized" << std::endl;
 }
 // number function and operations
-template<size_t H, size_t V>
-double Perceptron::dot_val(const std::array<std::array<double, H>, V> layer)
+template<size_t N>
+double Perceptron::dot_val(const std::array<std::map<std::string, double>, N> layer)
 {
     double output;
     for (size_t i = 0; i < V; ++i)
-        output += layer[i][0] * layer[i][1]; // output += val * weight
+        output += layer[i]["value"] * layer[i]["weight"]; // output += val * weight
     return output;
 }
 
@@ -32,11 +33,6 @@ double Perceptron::sigmoid(const double &num)
 double Perceptron::relu(const double &num)
 {
     return (num > 0) ? num : 0;
-}
-
-double Perceptron::cost(double y, double y_hat)
-{ 
-    return 0.5 * ((y - y_hat) * (y - y_hat)); 
 }
 
 double Perceptron::random_number() 
@@ -58,8 +54,7 @@ void Perceptron::parse_file(std::string path)
         std::cout << "Unable to open file";
         return;
     }
-    double sepal_length, sepal_width, petal_length, petal_width;
-    std::string iris_type;
+    double sepal_length, sepal_width, petal_length, petal_width, iris_type;
     std::string line;
     size_t line_number = 0;
 
@@ -70,11 +65,11 @@ void Perceptron::parse_file(std::string path)
 
         iss >> sepal_length >> sepal_width >> petal_length >> petal_width >> iris_type;
         
-        if (iris_type == "iris-setosa")
+        if (iris_type == 0)
             iris_setosa[line_number] = {sepal_length, sepal_width, petal_length, petal_width};
-        else if (iris_type == "iris-versicolor")
+        else if (iris_type == 1)
             iris_versicolor[line_number - 50] = {sepal_length, sepal_width, petal_length, petal_width};
-        else if (iris_type == "iris-virginica")
+        else if (iris_type == 2)
             iris_virginica[line_number - 100] = {sepal_length, sepal_width, petal_length, petal_width};
         ++line_number;
     }
@@ -94,51 +89,49 @@ void Perceptron::parse_file(std::string path)
 
 void Perceptron::display()
 {
-    std::cout << "iris_setosa.size(): " << iris_setosa.size() << ", iris_versicolor.size(): " << iris_versicolor.size() << ", iris_virginica.size(): " << iris_virginica.size();
+    std::setprecision(2);
+    std::cout << "input_layer:" << std::endl;
+    std::cout << "value, weight, bias" << std::endl;
+    for (const auto &node : input_layer)
+        std::cout << "[" << node << "], ";
+    std::cout << std::endl;
+    std::cout << "hidden_layer:" << std::endl;
+    for (auto &node : hidden_layer)
+        std::cout << "[" << node["value"] << ", " << node["weight"] << ", " << node["bias"] << "], ";
+    std::cout << std::endl;
+    std::cout << "output_layer:" << std::endl;
+    for (auto &node : output_layer)
+        std::cout << "[" << node["value"] << ", " << node["weight"] << ", " << node["bias"] << "], ";
+    std::cout << std::endl;
 }
 
-void Perceptron::display_accuracy()
+template<size_t N>
+void Perceptron::initialize(std::array<std::map<std::string, double>, N> &layer)
 {
-
-}
-
-void Perceptron::initialize_weights_bias()
-{
-    for (auto &elem : input_layer)
-        elem[1] = random_number(); // weight
-    for (auto &elem : hidden_layer)
+    for (auto &elem : layer)
     {
-        elem[1] = random_number(); // weight
-        elem[2] = random_number(); // bias
-    }
-    for (auto &elem : output_layer)
-    {
-        elem[1] = random_number(); // weight
-        elem[2] = random_number(); // bias
+        elem["value"] = 0; // value
+        elem["weight"] = random_number(); // weight
+        elem["bias"] = random_number(); // bias
     }
 }
 
 void Perceptron::train(size_t epoch_init)
 {
     epochs = epoch_init;
-    double total_acc;
     while (epochs > 0)
     {
         std::cout << "Epoch " << epochs << "\n\n";
         
-        total_acc += epoch();
+        epoch();
 
-        std::cout << "Accuracy: " << (total_acc / 90.0) << "%\n\n";
+        std::cout << "Accuracy: " << "?" << "%\n\n";
         --epochs;
     }
 }
 
-double Perceptron::epoch()
+void set_y_val(std::string &y_str, double &y, const size_t i)
 {
-    for (size_t i = 0; i < 90; ++i)
-    {
-        double y_hat, y;
-        std::string y_str;
         if (i < 30)
         {
             y = 0;
@@ -154,14 +147,41 @@ double Perceptron::epoch()
             y = 2;
             y_str = "iris_virginica";
         }
-        for (size_t j = 0; j < 4; ++j)
-            input_layer[j][0] = training_set[i][j]; // initialize input layer
-        for (size_t j = 0; j < 6; ++j)
-            hidden_layer[j][0] = relu(dot_val(input_layer) + hidden_layer[j][2]); // hidden node = dot product + bias
-        for (size_t j = 0; j < 3; ++j)
-            output_layer[j][0] = sigmoid(dot_val(hidden_layer) + output_layer[j][2]); // setting output node
-        
-        std::cout << output_layer[0][0] << " " << output_layer[1][0] << " " << output_layer[2][0] << std::endl;
-        return 0.0;
+}
+
+void Perceptron::epoch()
+{
+    for (size_t i = 0; i < 90; ++i)
+    {
+        double y_hat, y;
+        std::string y_str;
+        set_y_val(y_str, y, i);
+
+        input_layer = training_set[i]; // Initialize input layer
+        set_hidden_values();
+        set_output_values(y, y_hat);
+
+        std::cout << i << " " << std::boolalpha << (y_hat == y) << ", y^: " << y_hat << " y: " << y << std::endl;
+    }
+}
+
+void Perceptron::set_hidden_values()
+{
+    for (size_t i = 0; i < 6; ++i)
+        hidden_layer[i]["value"] = sigmoid( + hidden_layer[i]["bias"]); // hidden node = dot product + bias
+}
+
+void Perceptron::set_output_values(double y, double &y_hat)
+{
+    for (size_t i = 0; i < 3; ++i)
+    {
+        output_layer[i]["value"] = sigmoid(dot_val(hidden_layer) + output_layer[i]["bias"]); // setting output node
+        if (i == y)
+            output_layer[i]["y"] = 1;
+        else
+            output_layer[i]["y"] = 0;
+
+        if (output_layer[i]["value"] > y_hat) // setting actual value
+            y_hat = (double)i;
     }
 }

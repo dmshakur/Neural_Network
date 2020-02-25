@@ -3,11 +3,17 @@
 
 int main() 
 {
-    Perceptron test {"./iris.txt"};
+    Perceptron network {"./iris.txt"};
 
-    // test.display();
+    network.display();
 
-    test.train(5);
+    std::cout << std::endl;
+
+    network.train(1);
+
+    std::cout << std::endl;    
+
+    network.display();
 
     return 0;
 }
