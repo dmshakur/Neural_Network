@@ -7,34 +7,29 @@
 class Perceptron
 {
 private:
-    std::array<std::array<double, 4>, 50> // Data for training
-            iris_setosa,
-            iris_versicolor,
-            iris_virginica;
+    std::array<std::array<double, 4>, 50> iris_setosa, iris_versicolor, iris_virginica;
     std::array<std::array<double, 4>, 90> training_set; // 30 setosa -> 30 versicolor -> 30 virginica
     std::array<std::array<double, 4>, 60> test_set; // 20 setosa -> 20 versicolor -> 20 virginica
-    std::array<double, 4> input_layer;
+    std::vector<std::map<std::string, double>> input_layer;
     // {hidden_layer} pos 0 of every secondary sub array is the val, pos 1 is the weight and pos 2 is the bias
-    std::array<std::map<std::string, double>, 5> hidden_layer;
+    std::vector<std::map<std::string, double>> hidden_layer;
     // {ouput_layer} pos 0 = setosa, pos 1 = versicolor, pos 2 = virginica
-    std::array<std::map<std::string, double>, 3> output_layer;
+    std::vector<std::map<std::string, double>> output_layer;
     size_t epochs = 1;
-    template<size_t N>
-    double dot_val(const std::array<std::map<std::string, double>, N> layer);
-    double sigmoid(const double &num);
-    double relu(const double &num);
+    double dot_val(std::vector<std::map<std::string, double>> &layer);
+    double sigmoid(const double num);
+    double relu(const double num);
     double random_number();
     void parse_file(std::string path);
-    template<size_t N>
-    void initialize(std::array<std::map<std::string, double>, N> &layer);
+    void initialize(std::vector<std::map<std::string, double>> &layer, size_t size, std::string layer_type = "");
     void create_data_sets();
     void epoch();
-    void set_hidden_values();
-    void set_output_values(double y, double &y_hat);
+    void forward_prop(double y, double &y_hat);
+    void back_prop(std::array<double, 3> expected);
 public:
     Perceptron(std::string file_path);
     ~Perceptron() = default;
-    void train(size_t epochs);
+    void train(size_t epochs = 1);
     void test();
     void display();
 };

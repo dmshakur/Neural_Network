@@ -4,6 +4,7 @@
 int main() 
 {
     Perceptron network {"./iris.txt"};
+    // Initializing MLP with dataset file path
 
     network.display();
 

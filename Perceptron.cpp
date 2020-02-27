@@ -11,26 +11,26 @@
 Perceptron::Perceptron(std::string file_path)
 {
     parse_file(file_path);
-    initialize(hidden_layer);
-    initialize(output_layer);
-    std::cout << "File parsed, weights and bias randomized" << std::endl;
+    initialize(input_layer, 4, "input");
+    initialize(hidden_layer, 6);
+    initialize(output_layer, 3, "output");
+    std::cout << "\nFile parsed, weights and bias randomized\n\n";
 }
 // number function and operations
-template<size_t N>
-double Perceptron::dot_val(const std::array<std::map<std::string, double>, N> layer)
+double Perceptron::dot_val(std::vector<std::map<std::string, double>> &layer)
 {
     double output;
-    for (size_t i = 0; i < V; ++i)
+    for (size_t i = 0; i < layer.size(); ++i)
         output += layer[i]["value"] * layer[i]["weight"]; // output += val * weight
     return output;
 }
 
-double Perceptron::sigmoid(const double &num)
+double Perceptron::sigmoid(const double num)
 { 
     return (1 / (1 + exp(-num))); 
 }
 
-double Perceptron::relu(const double &num)
+double Perceptron::relu(const double num)
 {
     return (num > 0) ? num : 0;
 }
@@ -90,29 +90,31 @@ void Perceptron::parse_file(std::string path)
 void Perceptron::display()
 {
     std::setprecision(2);
-    std::cout << "input_layer:" << std::endl;
     std::cout << "value, weight, bias" << std::endl;
-    for (const auto &node : input_layer)
-        std::cout << "[" << node << "], ";
+    std::cout << "input_layer:" << std::endl;
+    for (auto &node : input_layer)
+        std::cout << "[value: " << node["value"] << ", weight: " << node["weight"] << "], ";
     std::cout << std::endl;
     std::cout << "hidden_layer:" << std::endl;
     for (auto &node : hidden_layer)
-        std::cout << "[" << node["value"] << ", " << node["weight"] << ", " << node["bias"] << "], ";
+        std::cout << "[value: " << node["value"] << ", weight: " << node["weight"] << ", " << node["bias"] << "], ";
     std::cout << std::endl;
     std::cout << "output_layer:" << std::endl;
     for (auto &node : output_layer)
-        std::cout << "[" << node["value"] << ", " << node["weight"] << ", " << node["bias"] << "], ";
+        std::cout << "[value: " << node["value"] << ", bias: " << node["bias"] << "], ";
     std::cout << std::endl;
 }
 
-template<size_t N>
-void Perceptron::initialize(std::array<std::map<std::string, double>, N> &layer)
+void Perceptron::initialize(std::vector<std::map<std::string, double>> &layer, size_t size, std::string layer_type)
 {
-    for (auto &elem : layer)
+    for (size_t i = 0; i < size; ++i)
     {
-        elem["value"] = 0; // value
-        elem["weight"] = random_number(); // weight
-        elem["bias"] = random_number(); // bias
+        layer.push_back({});
+        layer[i]["value"] = 0; // value
+        if (layer_type != "output")
+            layer[i]["weight"] = random_number(); // weight
+        if (layer_type != "input")
+            layer[i]["bias"] = random_number(); // bias
     }
 }
 
@@ -125,54 +127,60 @@ void Perceptron::train(size_t epoch_init)
         
         epoch();
 
-        std::cout << "Accuracy: " << "?" << "%\n\n";
         --epochs;
     }
 }
 
-void set_y_val(std::string &y_str, double &y, const size_t i)
+void set_y_val(std::string &y_str, double &y, const size_t i, std::array<double, 3> &expected)
 {
         if (i < 30)
         {
             y = 0;
             y_str = "iris_setosa";
+            expected = {1, 0, 0};
         }
         else if (i < 60)
         {
             y = 1;
             y_str = "iris_versicolor";
+            expected = {0, 1, 0};
         }
         else if (i < 90)
         {
             y = 2;
             y_str = "iris_virginica";
+            expected = {0, 0, 1};
         }
 }
 
 void Perceptron::epoch()
 {
+    // double correct;
     for (size_t i = 0; i < 90; ++i)
     {
         double y_hat, y;
+        std::array<double, 3> expected;
         std::string y_str;
-        set_y_val(y_str, y, i);
+        set_y_val(y_str, y, i, expected);
 
-        input_layer = training_set[i]; // Initialize input layer
-        set_hidden_values();
-        set_output_values(y, y_hat);
+        for (size_t j = 0; j < 4; ++j) // Initialize input layer values
+            input_layer[j]["value"] = training_set[i][j];
 
-        std::cout << i << " " << std::boolalpha << (y_hat == y) << ", y^: " << y_hat << " y: " << y << std::endl;
+        forward_prop(y, y_hat);
+        back_prop(expected);
+
+        // std::cout << i << " " << std::boolalpha << (y_hat == y) << ", y^: " << y_hat << " y: " << y << std::endl;
+        // if (y == y_hat)
+        //     correct += 1;
     }
+    // std::setprecision(2);
+    // std::cout << "Accuracy: " << (correct / 90) << "%\n\n";
 }
 
-void Perceptron::set_hidden_values()
+void Perceptron::forward_prop(double y, double &y_hat)
 {
     for (size_t i = 0; i < 6; ++i)
-        hidden_layer[i]["value"] = sigmoid( + hidden_layer[i]["bias"]); // hidden node = dot product + bias
-}
-
-void Perceptron::set_output_values(double y, double &y_hat)
-{
+        hidden_layer[i]["value"] = sigmoid(dot_val(input_layer) + hidden_layer[i]["bias"]); // hidden node = dot product + bias
     for (size_t i = 0; i < 3; ++i)
     {
         output_layer[i]["value"] = sigmoid(dot_val(hidden_layer) + output_layer[i]["bias"]); // setting output node
@@ -184,4 +192,39 @@ void Perceptron::set_output_values(double y, double &y_hat)
         if (output_layer[i]["value"] > y_hat) // setting actual value
             y_hat = (double)i;
     }
+}
+
+void Perceptron::back_prop(std::array<double, 3> expected)
+{
+    std::vector<double> output_errors;
+    for (size_t i = 0; i < output_layer.size(); ++i)
+    {
+        output_errors.push_back(expected[i] - output_layer[i]["value"]);
+        output_layer[i]["error"] = output_errors[i] * (output_layer[i]["value"] * (1 - output_layer[i]["value"]));
+    }
+    // output layer finished
+
+    std::vector<double> hidden_errors;
+    for (size_t i = 0; i < hidden_layer.size(); ++i)
+    {
+        double error = 0;
+        for (auto &node : output_layer)
+            error += (hidden_layer[i]["weight"] * node["error"]);
+        hidden_errors.push_back(error);
+    }
+    for (size_t i = 0; i < hidden_layer.size(); ++i)
+        hidden_layer[i]["error"] = hidden_errors[i] * (hidden_layer[i]["value"] * (1 - hidden_layer[i]["value"]));
+    // hidden layer finished
+
+    std::vector<double> input_errors;
+    for (size_t i = 0; i < input_layer.size(); ++i)
+    {
+        double error = 0;
+        for (auto &node : hidden_layer)
+            error += (input_layer[i]["weight"] * node["error"]);
+        input_errors.push_back(error);
+    }
+    for (size_t i = 0; i < input_layer.size(); ++i)
+        input_layer[i]["error"] = input_errors[i] * (input_layer[i]["value"] * (1 - input_layer[i]["value"]));
+    // input layer finished
 }
