@@ -155,7 +155,6 @@ void set_y_val(std::string &y_str, double &y, const size_t i, std::array<double,
 
 void Perceptron::epoch()
 {
-    // double correct;
     for (size_t i = 0; i < 90; ++i)
     {
         double y_hat, y;
@@ -168,13 +167,10 @@ void Perceptron::epoch()
 
         forward_prop(y, y_hat);
         back_prop(expected);
+        update_network(0.05);
 
         // std::cout << i << " " << std::boolalpha << (y_hat == y) << ", y^: " << y_hat << " y: " << y << std::endl;
-        // if (y == y_hat)
-        //     correct += 1;
     }
-    // std::setprecision(2);
-    // std::cout << "Accuracy: " << (correct / 90) << "%\n\n";
 }
 
 void Perceptron::forward_prop(double y, double &y_hat)
@@ -227,4 +223,27 @@ void Perceptron::back_prop(std::array<double, 3> expected)
     for (size_t i = 0; i < input_layer.size(); ++i)
         input_layer[i]["error"] = input_errors[i] * (input_layer[i]["value"] * (1 - input_layer[i]["value"]));
     // input layer finished
+}
+
+void Perceptron::update_network(double l_rate)
+{
+    std::vector<double> input_vals;
+    for (auto &node : input_layer)
+        input_vals.push_back(node["value"]);
+    for (auto &node : hidden_layer) // Looping throught the networks current layer
+    {
+        for (size_t i = 0; i < input_vals.size(); ++i) // Looping through the previous layers values
+            input_layer[i]["weight"] += l_rate * node["error"] * input_vals[i];
+        node["bias"] += l_rate * node["error"];
+    }
+    // updated weights and bias for hidden layer
+    std::vector<double> hidden_vals;
+    for (auto &node : output_layer)
+        hidden_vals.push_back(node["value"]);
+    for (auto &node : hidden_layer)
+    {
+        for (size_t i = 0; i < hidden_vals.size(); ++i)
+            input_layer[i]["weight"] += l_rate * node["error"] * hidden_vals[i];
+        node["bias"] += l_rate * node["error"];
+    }
 }

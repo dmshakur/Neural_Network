@@ -26,6 +26,7 @@ private:
     void epoch();
     void forward_prop(double y, double &y_hat);
     void back_prop(std::array<double, 3> expected);
+    void update_network(double l_rate);
 public:
     Perceptron(std::string file_path);
     ~Perceptron() = default;

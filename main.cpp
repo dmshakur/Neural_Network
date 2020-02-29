@@ -10,7 +10,7 @@ int main()
 
     std::cout << std::endl;
 
-    network.train(1);
+    network.train(5);
 
     std::cout << std::endl;    
 
