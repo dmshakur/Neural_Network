@@ -1,20 +1,20 @@
 #include <iostream>
-#include "Perceptron.cpp"
+#include "Neural_Network.cpp"
 
 int main() 
 {
-    Perceptron network {"./iris.txt"};
+    Neural_Network network {"./iris.txt"};
     // Initializing MLP with dataset file path
 
-    network.display();
+    // network.display();
 
-    std::cout << std::endl;
+    std::cout << std::endl << std::fixed << std::setprecision(2);
 
-    network.train(5);
+    network.train(20);
 
     std::cout << std::endl;    
 
-    network.display();
+    // network.display();
 
     return 0;
 }

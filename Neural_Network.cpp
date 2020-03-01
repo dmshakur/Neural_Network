@@ -1,4 +1,4 @@
-#include "Perceptron.h"
+#include "Neural_Network.h"
 #include <iostream>
 #include <cstdlib>
 #include <iomanip>
@@ -8,7 +8,7 @@
 #include <vector>
 #include <string>
 
-Perceptron::Perceptron(std::string file_path)
+Neural_Network::Neural_Network(std::string file_path)
 {
     parse_file(file_path);
     initialize(input_layer, 4, "input");
@@ -17,35 +17,25 @@ Perceptron::Perceptron(std::string file_path)
     std::cout << "\nFile parsed, weights and bias randomized\n\n";
 }
 // number function and operations
-double Perceptron::dot_val(std::vector<std::map<std::string, double>> &layer)
+double Neural_Network::dot_val(std::vector<std::map<std::string, double>> &layer)
 {
     double output;
-    for (size_t i = 0; i < layer.size(); ++i)
-        output += layer[i]["value"] * layer[i]["weight"]; // output += val * weight
+    for (auto node : layer)
+        output += node["value"] * node["weight"]; // output += val * weight
     return output;
 }
 
-double Perceptron::sigmoid(const double num)
+double Neural_Network::sigmoid(const double num)
 { 
     return (1 / (1 + exp(-num))); 
 }
 
-double Perceptron::relu(const double num)
-{
-    return (num > 0) ? num : 0;
-}
-
-double Perceptron::random_number() 
+double Neural_Network::random_number() 
 { 
     return (double)rand() / (double)RAND_MAX; 
 }
 
-void Perceptron::test()
-{
-
-}
-
-void Perceptron::parse_file(std::string path)
+void Neural_Network::parse_file(std::string path)
 {
     std::ifstream in_file;
     in_file.open(path);
@@ -87,25 +77,25 @@ void Perceptron::parse_file(std::string path)
     }
 }
 
-void Perceptron::display()
+void Neural_Network::display()
 {
-    std::setprecision(2);
-    std::cout << "value, weight, bias" << std::endl;
-    std::cout << "input_layer:" << std::endl;
-    for (auto &node : input_layer)
-        std::cout << "[value: " << node["value"] << ", weight: " << node["weight"] << "], ";
-    std::cout << std::endl;
-    std::cout << "hidden_layer:" << std::endl;
-    for (auto &node : hidden_layer)
-        std::cout << "[value: " << node["value"] << ", weight: " << node["weight"] << ", " << node["bias"] << "], ";
-    std::cout << std::endl;
-    std::cout << "output_layer:" << std::endl;
+    // std::setprecision(2);
+    // std::cout << "value, weight, bias" << std::endl;
+    // std::cout << "input_layer:" << std::endl;
+    // for (auto &node : input_layer)
+    //     std::cout << "[value: " << node["value"] << ", weight: " << node["weight"] << "], ";
+    // std::cout << std::endl;
+    // std::cout << "hidden_layer:" << std::endl;
+    // for (auto &node : hidden_layer)
+    //     std::cout << "[value: " << node["value"] << ", weight: " << node["weight"] << ", bias: " << node["bias"] << ", error " << node["error"] << "], ";
+    // std::cout << std::endl;
+    // std::cout << "output_layer:" << std::endl;
     for (auto &node : output_layer)
-        std::cout << "[value: " << node["value"] << ", bias: " << node["bias"] << "], ";
+        std::cout << "[value: " << node["value"] << ", bias: " << node["bias"] << ", error: " << node["error"] << "], ";
     std::cout << std::endl;
 }
 
-void Perceptron::initialize(std::vector<std::map<std::string, double>> &layer, size_t size, std::string layer_type)
+void Neural_Network::initialize(std::vector<std::map<std::string, double>> &layer, size_t size, std::string layer_type)
 {
     for (size_t i = 0; i < size; ++i)
     {
@@ -118,16 +108,15 @@ void Perceptron::initialize(std::vector<std::map<std::string, double>> &layer, s
     }
 }
 
-void Perceptron::train(size_t epoch_init)
+void Neural_Network::train(size_t epoch_init)
 {
-    epochs = epoch_init;
-    while (epochs > 0)
+    const size_t count = epoch_init;
+    while (epoch_init > 0)
     {
-        std::cout << "Epoch " << epochs << "\n\n";
-        
+        std::cout << "Epoch " << 1 + (count - epoch_init) << "\n\n";
         epoch();
-
-        --epochs;
+        display();
+        --epoch_init;
     }
 }
 
@@ -153,44 +142,38 @@ void set_y_val(std::string &y_str, double &y, const size_t i, std::array<double,
         }
 }
 
-void Perceptron::epoch()
+void Neural_Network::epoch()
 {
+    size_t correct = 0;
     for (size_t i = 0; i < 90; ++i)
     {
         double y_hat, y;
-        std::array<double, 3> expected;
+        std::array<double, 3> expected {0, 0, 0}, actual {0, 0, 0};
         std::string y_str;
         set_y_val(y_str, y, i, expected);
 
         for (size_t j = 0; j < 4; ++j) // Initialize input layer values
             input_layer[j]["value"] = training_set[i][j];
 
-        forward_prop(y, y_hat);
+        forward_prop(y_hat, actual);
         back_prop(expected);
-        update_network(0.05);
-
-        // std::cout << i << " " << std::boolalpha << (y_hat == y) << ", y^: " << y_hat << " y: " << y << std::endl;
+        update_network(0.125);
     }
 }
 
-void Perceptron::forward_prop(double y, double &y_hat)
+void Neural_Network::forward_prop(double &y_hat, std::array<double, 3> &expected)
 {
-    for (size_t i = 0; i < 6; ++i)
-        hidden_layer[i]["value"] = sigmoid(dot_val(input_layer) + hidden_layer[i]["bias"]); // hidden node = dot product + bias
-    for (size_t i = 0; i < 3; ++i)
+    for (auto &node : hidden_layer)
+        node["value"] = sigmoid(dot_val(input_layer) + node["bias"]);
+    for (size_t i = 0; i < output_layer.size(); ++i)
     {
-        output_layer[i]["value"] = sigmoid(dot_val(hidden_layer) + output_layer[i]["bias"]); // setting output node
-        if (i == y)
-            output_layer[i]["y"] = 1;
-        else
-            output_layer[i]["y"] = 0;
-
-        if (output_layer[i]["value"] > y_hat) // setting actual value
+        output_layer[i]["value"] = sigmoid(dot_val(hidden_layer) + output_layer[i]["bias"]);
+        if (output_layer[i]["value"] > y_hat)
             y_hat = (double)i;
     }
 }
 
-void Perceptron::back_prop(std::array<double, 3> expected)
+void Neural_Network::back_prop(std::array<double, 3> expected) // work backwards from the output layer
 {
     std::vector<double> output_errors;
     for (size_t i = 0; i < output_layer.size(); ++i)
@@ -225,25 +208,27 @@ void Perceptron::back_prop(std::array<double, 3> expected)
     // input layer finished
 }
 
-void Perceptron::update_network(double l_rate)
+void Neural_Network::update_network(double l_rate)
 {
     std::vector<double> input_vals;
     for (auto &node : input_layer)
         input_vals.push_back(node["value"]);
-    for (auto &node : hidden_layer) // Looping throught the networks current layer
+    for (auto &node : hidden_layer)
     {
-        for (size_t i = 0; i < input_vals.size(); ++i) // Looping through the previous layers values
+        for (size_t i = 0; i < input_vals.size(); ++i)
             input_layer[i]["weight"] += l_rate * node["error"] * input_vals[i];
         node["bias"] += l_rate * node["error"];
     }
     // updated weights and bias for hidden layer
     std::vector<double> hidden_vals;
-    for (auto &node : output_layer)
-        hidden_vals.push_back(node["value"]);
     for (auto &node : hidden_layer)
+        hidden_vals.push_back(node["value"]);
+    for (auto &node : output_layer)
     {
         for (size_t i = 0; i < hidden_vals.size(); ++i)
-            input_layer[i]["weight"] += l_rate * node["error"] * hidden_vals[i];
+            node["weight"] += l_rate * node["error"] * hidden_vals[i];
         node["bias"] += l_rate * node["error"];
     }
+    // updated weights and bias for output layer
 }
+

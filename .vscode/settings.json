@@ -50,5 +50,6 @@
     },
     "files.exclude": {
         "**/.git": false
-    }
+    },
+    "python.pythonPath": "C:\\Anaconda3\\envs\\tensorflow\\python.exe"
 }
