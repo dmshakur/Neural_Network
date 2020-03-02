@@ -11,17 +11,15 @@
 Neural_Network::Neural_Network(std::string file_path)
 {
     parse_file(file_path);
-    initialize(input_layer, 4, "input");
-    initialize(hidden_layer, 6);
-    initialize(output_layer, 3, "output");
+    initialize({4, 6, 3});
     std::cout << "\nFile parsed, weights and bias randomized\n\n";
 }
 // number function and operations
-double Neural_Network::dot_val(std::vector<std::map<std::string, double>> &layer)
+double Neural_Network::dot_val(std::vector<double> val,std::vector<double> weights)
 {
     double output;
-    for (auto node : layer)
-        output += node["value"] * node["weight"]; // output += val * weight
+    for (size_t i = 0; i < weights.size(); ++i)
+        output += val[i] * weights[i];
     return output;
 }
 
@@ -79,32 +77,81 @@ void Neural_Network::parse_file(std::string path)
 
 void Neural_Network::display()
 {
-    // std::setprecision(2);
-    // std::cout << "value, weight, bias" << std::endl;
-    // std::cout << "input_layer:" << std::endl;
-    // for (auto &node : input_layer)
-    //     std::cout << "[value: " << node["value"] << ", weight: " << node["weight"] << "], ";
-    // std::cout << std::endl;
-    // std::cout << "hidden_layer:" << std::endl;
-    // for (auto &node : hidden_layer)
-    //     std::cout << "[value: " << node["value"] << ", weight: " << node["weight"] << ", bias: " << node["bias"] << ", error " << node["error"] << "], ";
-    // std::cout << std::endl;
-    // std::cout << "output_layer:" << std::endl;
-    for (auto &node : output_layer)
-        std::cout << "[value: " << node["value"] << ", bias: " << node["bias"] << ", error: " << node["error"] << "], ";
+    std::cout << std::fixed << std::setprecision(2);
+    
+    std::cout << "values:\n";
+    for (size_t i = 0; i < values.size(); ++i)
+    {
+        std::cout << "layer " << i << "\n[ ";
+        for (size_t j = 0; j < values[i].size(); ++j)
+            std::cout << values[i][j] << " ";
+        std::cout << " ]\n";
+    }
+
+    std::cout << std::endl;
+
+    std::cout << "bias:\n";
+    for (size_t i = 0; i < bias.size(); ++i)
+    {
+        std::cout << "layer " << i << "\n[ ";
+        for (size_t j = 0; j < bias[i].size(); ++j)
+            std::cout << bias[i][j] << " ";
+        std::cout << " ]\n";
+    }
+
+    std::cout << std::endl;
+
+    std::cout << "errors:\n";
+    for (size_t i = 0; i < errors.size(); ++i)
+    {
+        std::cout << "layer " << i << "\n[ ";
+        for (size_t j = 0; j < errors[i].size(); ++j)
+            std::cout << errors[i][j] << " ";
+        std::cout << " ]\n";
+    }
+
+    std::cout << std::endl;
+
+    std::cout << "weights:\n";
+    for (size_t i = 0; i < weights.size(); ++i)
+    {
+        std::cout << "layer " << i << "[\n";
+        for (size_t j = 0; j < weights[i].size(); ++j)
+        {
+            std::cout << "node [ ";
+            for (size_t k = 0; k < weights[i][j].size(); ++k)
+                std::cout << weights[i][j][k] << " ";
+            std::cout << " ]\n";
+        }
+        std::cout << "]\n";
+    }
+
     std::cout << std::endl;
 }
 
-void Neural_Network::initialize(std::vector<std::map<std::string, double>> &layer, size_t size, std::string layer_type)
+void Neural_Network::initialize(std::vector<size_t> layers)
 {
-    for (size_t i = 0; i < size; ++i)
+    for (size_t i = 0; i < layers.size(); ++i)
     {
-        layer.push_back({});
-        layer[i]["value"] = 0; // value
-        if (layer_type != "output")
-            layer[i]["weight"] = random_number(); // weight
-        if (layer_type != "input")
-            layer[i]["bias"] = random_number(); // bias
+        std::vector<double> v, b, e;
+        std::vector<std::vector<double>> w;
+        //initializing the nodes in the layers
+        for (size_t j = 0; j < layers[i]; ++j)
+        {
+            v.push_back(0);
+            b.push_back(random_number());
+            e.push_back(1);
+            std::vector<double> inner_w;
+            if (i != 0) // checking if the current layer is the input
+                for (size_t k = 0; k < layers[i - 1]; ++k) // adding weights to the current layer to the amount of nodes in the next layer
+                    inner_w.push_back(random_number()); // adding a weight to the current layer for a node in the next layer
+            w.push_back(inner_w);
+        }
+        values.push_back(v);
+        bias.push_back(b);
+        errors.push_back(e);
+        weights.push_back(w);
+        ++net_size;
     }
 }
 
@@ -120,7 +167,7 @@ void Neural_Network::train(size_t epoch_init)
     }
 }
 
-void set_y_val(std::string &y_str, double &y, const size_t i, std::array<double, 3> &expected)
+void set_y_val(std::string &y_str, double &y, const size_t i, std::vector<double> &expected)
 {
         if (i < 30)
         {
@@ -145,90 +192,79 @@ void set_y_val(std::string &y_str, double &y, const size_t i, std::array<double,
 void Neural_Network::epoch()
 {
     size_t correct = 0;
+    double cost;
     for (size_t i = 0; i < 90; ++i)
     {
-        double y_hat, y;
-        std::array<double, 3> expected {0, 0, 0}, actual {0, 0, 0};
+        std::vector<double> expected {0, 0, 0}, actual {0, 0, 0};
         std::string y_str;
+        double y_hat, y;
         set_y_val(y_str, y, i, expected);
+        for (size_t j = 0; j < values[0].size(); ++j) // Initialize input layer values
+            values[0][j] = training_set[i][j]; // value[0] is the input layer, j is the node
 
-        for (size_t j = 0; j < 4; ++j) // Initialize input layer values
-            input_layer[j]["value"] = training_set[i][j];
-
-        forward_prop(y_hat, actual);
+        forward_prop(y_hat, actual, cost);
+        actual[(size_t)y_hat] = 1;
+        if (expected == actual)
+            ++correct;
         back_prop(expected);
         update_network(0.125);
     }
+    std::cout << "cost: " << cost / 90 << std::endl;
 }
 
-void Neural_Network::forward_prop(double &y_hat, std::array<double, 3> &expected)
+void Neural_Network::forward_prop(double &y_hat, std::vector<double> &expected, double &cost)
 {
-    for (auto &node : hidden_layer)
-        node["value"] = sigmoid(dot_val(input_layer) + node["bias"]);
-    for (size_t i = 0; i < output_layer.size(); ++i)
+    for (size_t i = 1; i < net_size - 1; ++i) // looping through every layer except the first and last
+        for (size_t j = 0; j < values[i].size(); ++j) // looping through every node in the current non input/output layer
+            values[i][j] = sigmoid(dot_val(values[i - 1], weights[i][j]) + bias[i][j]); // assigning node j of layer i a sigmoided val that is the dotval + the associated bias
+    for (size_t i = 0; i < values[net_size - 1].size(); ++i) // looping through the ouptut layer
     {
-        output_layer[i]["value"] = sigmoid(dot_val(hidden_layer) + output_layer[i]["bias"]);
-        if (output_layer[i]["value"] > y_hat)
+        values[net_size - 1][i] = sigmoid(dot_val(values[net_size - 2], weights[net_size - 1][i]) + bias[net_size - 1][i]);
+        if (values[net_size - 1][i] > y_hat)
             y_hat = (double)i;
+        cost += pow(values[net_size - 1][i] - expected[i], 2);
     }
 }
 
-void Neural_Network::back_prop(std::array<double, 3> expected) // work backwards from the output layer
+double transfer_derivitive(double num)
+{
+    return num * (1 - num);
+}
+
+void Neural_Network::back_prop(std::vector<double> expected) // work backwards from the output layer
 {
     std::vector<double> output_errors;
-    for (size_t i = 0; i < output_layer.size(); ++i)
+    for (size_t i = 0; i < errors[net_size - 1].size(); ++i) // looping through the output layer
     {
-        output_errors.push_back(expected[i] - output_layer[i]["value"]);
-        output_layer[i]["error"] = output_errors[i] * (output_layer[i]["value"] * (1 - output_layer[i]["value"]));
-    }
-    // output layer finished
-
-    std::vector<double> hidden_errors;
-    for (size_t i = 0; i < hidden_layer.size(); ++i)
+        output_errors.push_back(expected[i] - values[net_size - 1][i]);
+        errors[net_size - 1][i] = output_errors[i] * transfer_derivitive(values[net_size - 1][i]);
+    } // output layer finished
+    for (size_t i = net_size - 2; i >= 0; --i) // looping through the non output layers backwards
     {
-        double error = 0;
-        for (auto &node : output_layer)
-            error += (hidden_layer[i]["weight"] * node["error"]);
-        hidden_errors.push_back(error);
+        std::vector<double> layer_errors;
+        for (size_t j = 0; j < errors[i].size(); ++j) // looping through the current layer's nodes
+        {
+            double error = 0;
+            for (size_t k = 0; k < weights[i + 1][j].size(); ++k) // looping through the current set of weights
+                error += weights[i + 1][j][k] * errors[i][j];
+            layer_errors.push_back(error);
+        }
+        for (size_t j = 0; j < layer_errors.size(); ++j)
+        {
+            errors[i][j] = layer_errors[j] * transfer_derivitive(values[i][j]);
+            std::cout << layer_errors[j] * transfer_derivitive(values[i][j]) << " ";
+        }
+        std::cout << "testing ";
     }
-    for (size_t i = 0; i < hidden_layer.size(); ++i)
-        hidden_layer[i]["error"] = hidden_errors[i] * (hidden_layer[i]["value"] * (1 - hidden_layer[i]["value"]));
-    // hidden layer finished
-
-    std::vector<double> input_errors;
-    for (size_t i = 0; i < input_layer.size(); ++i)
-    {
-        double error = 0;
-        for (auto &node : hidden_layer)
-            error += (input_layer[i]["weight"] * node["error"]);
-        input_errors.push_back(error);
-    }
-    for (size_t i = 0; i < input_layer.size(); ++i)
-        input_layer[i]["error"] = input_errors[i] * (input_layer[i]["value"] * (1 - input_layer[i]["value"]));
-    // input layer finished
 }
 
 void Neural_Network::update_network(double l_rate)
 {
-    std::vector<double> input_vals;
-    for (auto &node : input_layer)
-        input_vals.push_back(node["value"]);
-    for (auto &node : hidden_layer)
-    {
-        for (size_t i = 0; i < input_vals.size(); ++i)
-            input_layer[i]["weight"] += l_rate * node["error"] * input_vals[i];
-        node["bias"] += l_rate * node["error"];
-    }
-    // updated weights and bias for hidden layer
-    std::vector<double> hidden_vals;
-    for (auto &node : hidden_layer)
-        hidden_vals.push_back(node["value"]);
-    for (auto &node : output_layer)
-    {
-        for (size_t i = 0; i < hidden_vals.size(); ++i)
-            node["weight"] += l_rate * node["error"] * hidden_vals[i];
-        node["bias"] += l_rate * node["error"];
-    }
-    // updated weights and bias for output layer
+    for (size_t i = 0; i < net_size; ++i)
+        for (size_t j = 0; j < weights[i].size(); ++j)
+        {
+            for (size_t k = 0; k < weights[i][j].size(); ++k)
+                weights[i][j][k] += l_rate * errors[i][j] * values[i - 1][j];
+            bias[i][j] += l_rate * errors[i][j];
+        }
 }
-

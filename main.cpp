@@ -4,17 +4,12 @@
 int main() 
 {
     Neural_Network network {"./iris.txt"};
-    // Initializing MLP with dataset file path
-
-    // network.display();
 
     std::cout << std::endl << std::fixed << std::setprecision(2);
 
-    network.train(20);
+    network.train(5);
 
-    std::cout << std::endl;    
-
-    // network.display();
+    std::cout << std::endl;
 
     return 0;
 }
