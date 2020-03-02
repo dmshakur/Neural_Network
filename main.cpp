@@ -9,7 +9,7 @@ int main()
 
     network.train(5);
 
-    std::cout << std::endl;
+    std::cout << "completed successfully" << std::endl;
 
     return 0;
 }

@@ -162,7 +162,6 @@ void Neural_Network::train(size_t epoch_init)
     {
         std::cout << "Epoch " << 1 + (count - epoch_init) << "\n\n";
         epoch();
-        display();
         --epoch_init;
     }
 }
@@ -209,7 +208,7 @@ void Neural_Network::epoch()
         back_prop(expected);
         update_network(0.125);
     }
-    std::cout << "cost: " << cost / 90 << std::endl;
+    // std::cout << "cost: " << cost / 90 << std::endl;
 }
 
 void Neural_Network::forward_prop(double &y_hat, std::vector<double> &expected, double &cost)
@@ -239,22 +238,18 @@ void Neural_Network::back_prop(std::vector<double> expected) // work backwards f
         output_errors.push_back(expected[i] - values[net_size - 1][i]);
         errors[net_size - 1][i] = output_errors[i] * transfer_derivitive(values[net_size - 1][i]);
     } // output layer finished
-    for (size_t i = net_size - 2; i >= 0; --i) // looping through the non output layers backwards
+    for (size_t i = net_size - 2; i > 0; i--) // looping through the non output layers backwards
     {
-        std::vector<double> layer_errors;
+        std::vector<double> layer_errors {};
         for (size_t j = 0; j < errors[i].size(); ++j) // looping through the current layer's nodes
         {
             double error = 0;
-            for (size_t k = 0; k < weights[i + 1][j].size(); ++k) // looping through the current set of weights
-                error += weights[i + 1][j][k] * errors[i][j];
+            for (size_t k = 0; k < weights[i + 1].size(); ++k) // looping through the current set of weights
+                error += errors[i][j] * weights[i + 1][k][j];
             layer_errors.push_back(error);
         }
         for (size_t j = 0; j < layer_errors.size(); ++j)
-        {
             errors[i][j] = layer_errors[j] * transfer_derivitive(values[i][j]);
-            std::cout << layer_errors[j] * transfer_derivitive(values[i][j]) << " ";
-        }
-        std::cout << "testing ";
     }
 }
 
